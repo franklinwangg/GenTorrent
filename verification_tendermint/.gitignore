@@ -1,0 +1,39 @@
+# Gradle build artifacts
+build/
+.gradle/
+bin/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Compiled Java classes
+*.class
+
+# Logs
+*.log
+
+# Package files
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# JVM crash logs
+hs_err_pid*
+
+# Local configuration
+local.properties
+
+# Tendermint node data
+.tendermint/
+node/
+
+# Generated files
+out/
+gen/ 
