@@ -1,9 +1,7 @@
-from collections import deque
-from pyexpat import model
 from typing import Dict, List, Tuple
-from transformers import AutoTokenizer
 from .ModelNode import ModelNode
 import random
+from typing import Union
 
 ##############################################################################
 #                       HASH RADIX TRIE CLASSES
@@ -67,13 +65,13 @@ class HashRadixTree:
         node = self.insert_workload(first_workload)
         self.assign_workload(first_mnode, node)
 
-    def find_idle_node(self) -> str:
+    def find_idle_node(self) -> ModelNode:
         task_list = {model.pending_tasks:model for model in self.candidate_models}
         sorted_models = sorted(self.candidate_models, key=lambda model: model.pending_tasks)
         return sorted_models[0]
 
     def assign_workload(self, modelnode, hrt_node) -> None:
-        model_name = modelnode.name
+        # model_name = modelnode.name
         # modelnode.pending_tasks += 1
         # self.model_task[model_name] += 1
 
@@ -83,7 +81,7 @@ class HashRadixTree:
 
 
     @staticmethod
-    def hash_chunk(chunk: Tuple[int, ...], mod: int = 15) -> int:
+    def hash_chunk(chunk: Union[Tuple[int, ...], list[int]], mod: int = 15) -> int:
         """
         Compute an integer hash for a tuple of token IDs. Collisions are possible
         for sufficiently large data, but for small chunk sizes and small mod,
@@ -94,7 +92,7 @@ class HashRadixTree:
             hash_val = (hash_val * 31 + tid) % mod
         return hash_val
 
-    def insert_workload(self, tokens) -> None:
+    def insert_workload(self, tokens) -> HashRadixNode:
         """
         Insert a sequence of chunks (each chunk a tuple of token IDs) into the trie.
         """
@@ -133,7 +131,7 @@ class HashRadixTree:
         return current
 
 
-    def find_match_model(self, tokens) -> ModelNode:
+    def find_match_model(self, tokens) -> tuple[ModelNode, HashRadixNode]:
         current = self.root
         h_val = self.hash_chunk(self.magic_ids)
         current = current.children[h_val]
