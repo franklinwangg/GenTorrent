@@ -42,7 +42,7 @@ serve_q = asyncio.Queue(maxsize=SERVE_WORKERS)
 
 async def monitor_queues():
     while True:
-        await asyncio.sleep(30) 
+        await asyncio.sleep(30)
         print(f"[Monitor] sched_q: {sched_q.qsize()}, serve_q: {serve_q.qsize()}")
 
 async def sched_worker():
@@ -53,7 +53,7 @@ async def sched_worker():
         Q1_MS.append((t1 - t0) * 1000)
         ids = tokenizer(sample, return_tensors="pt")["input_ids"][0].tolist()
         tokens = ids
-        
+
 
         match_model, hrt_node = hrt.find_match_model(tokens)
         if match_model.pending_tasks == 4:
@@ -61,7 +61,7 @@ async def sched_worker():
             hrt.assign_workload(match_model, hrt_node)
 
         t2_sched = perf_counter()
-        
+
         await serve_q.put((idx, sample, t0, t1, t2_sched, match_model))
         sched_q.task_done()
 
