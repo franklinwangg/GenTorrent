@@ -1,0 +1,3 @@
+llm.generate("hello, my name is Daniel")
+llm.generate("hello, my name is Peter")
+^ if we call this

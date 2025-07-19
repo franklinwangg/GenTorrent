@@ -7,3 +7,4 @@ verification_tendermint/gradle/
 tests/
 backup_files/
 venv/
+**.DS_Store

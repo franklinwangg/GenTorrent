@@ -31,7 +31,7 @@ model_list = [
     ModelNode(f"mnode{i}", f"http://127.0.0.1:800{i}/v1/completions", max_concurrency=MAX_MODEL_CONCURRENCY)
     for i in range(8)
 ]
-hrt = None
+hrt: HashRadixTree = None
 hrt_ready = asyncio.Lock()
 
 Q1_MS, Q2_MS, INF_MS, E2E_MS = [], [], [], []

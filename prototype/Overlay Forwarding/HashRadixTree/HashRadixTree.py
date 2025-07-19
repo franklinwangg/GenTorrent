@@ -29,8 +29,8 @@ class HashRadixNode:
 
 class HashRadixTree:
     def __init__(self,
-                 first_workload,
-                 first_mnode,
+                 # first_workload,
+                 # first_mnode,
                  candidate_models: List[ModelNode],
                  gate: int = 10,
                  model_num: int = 8,
@@ -41,7 +41,7 @@ class HashRadixTree:
         self.candidate_models = candidate_models
         # self.model_task = {model.name: model.pending_tasks for model in self.candidate_models}
 
-        ### for toolbench case
+        ### for toolbench case --- magic ids shared by all data
         self.root1 = HashRadixNode()
         self.magic_ids = [128000, 2374, 25, 1472, 527, 9156, 38, 2898, 11, 499, 649, 1005, 1690, 7526, 2993, 82, 8, 311, 656, 279, 2768, 3465, 627,
                      5451, 358, 690, 3041, 499, 279, 3465, 4096, 11, 323, 701, 3465, 1212, 627, 1688, 1855, 3094, 11, 499, 1205, 311, 3041,
@@ -62,11 +62,11 @@ class HashRadixTree:
         self.root.children[h_val] = self.root1
 
 
-        node = self.insert_workload(first_workload)
-        self.assign_workload(first_mnode, node)
+        # node = self.insert_workload(first_workload)
+        # self.assign_workload(first_mnode, node)
 
     def find_idle_node(self) -> ModelNode:
-        task_list = {model.pending_tasks:model for model in self.candidate_models}
+        # task_list = {model.pending_tasks:model for model in self.candidate_models}
         sorted_models = sorted(self.candidate_models, key=lambda model: model.pending_tasks)
         return sorted_models[0]
 
@@ -107,8 +107,6 @@ class HashRadixTree:
             input_ids = tokens
         else:
             input_ids = tokens["input_ids"].tolist()[0]
-
-
 
         total_tokens = len(input_ids)
         chunks: List[Tuple[int, ...]] = []
@@ -162,13 +160,13 @@ class HashRadixTree:
             # print("! matched")
             # self.assign_workload(current.model_list[0], current)
             # print(self.model_task)
-            match_model = None
+            match_model: ModelNode = None
             min = 1e9
             for model in current.model_list:
-                if min > model.pending_tasks:
+                if model.pending_tasks < min:
                     match_model = model
                     min = model.pending_tasks
-            return  current.model_list[0], current
+            return match_model, current
         else:
             node = self.insert_workload(tokens)
             match_model = random.choice(self.candidate_models)
