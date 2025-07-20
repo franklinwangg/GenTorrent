@@ -1,0 +1,10 @@
+datasets/
+build/
+verification_tendermint/build/
+verification_tendermint/bin/
+verification_tendermint/.gradle/
+verification_tendermint/gradle/
+tests/
+backup_files/
+venv/
+**.DS_Store

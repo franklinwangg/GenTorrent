@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group 'io.planetllm'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.14.2'
+    implementation 'org.apache.commons:commons-math3:3.6.1'
+    implementation 'com.google.code.gson:gson:2.10.1'
+    implementation 'io.grpc:grpc-netty-shaded:1.54.1'
+    implementation 'io.grpc:grpc-protobuf:1.54.1'
+    implementation 'io.grpc:grpc-stub:1.54.1'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    
+    testImplementation 'junit:junit:4.13.2'
+}
+
+application {
+    mainClass = 'io.planetllm.App'
+} 
