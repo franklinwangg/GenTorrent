@@ -1,0 +1,77 @@
+INFO 07-20 23:10:10 [__init__.py:244] Automatically detected platform cuda.
+INFO 07-20 23:10:14 [api_server.py:1395] vLLM API server version 0.9.2
+INFO 07-20 23:10:14 [cli_args.py:325] non-default args: {'port': 8001, 'model': 'keeeeenw/MicroLlama', 'trust_remote_code': True, 'served_model_name': ['mnode1'], 'gpu_memory_utilization': 0.6, 'max_num_seqs': 1}
+INFO 07-20 23:10:24 [config.py:841] This model supports multiple tasks: {'classify', 'reward', 'embed', 'generate'}. Defaulting to 'generate'.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 1495, in <module>
+    uvloop.run(run_server(args))
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/uvloop/__init__.py", line 109, in run
+    return __asyncio.run(
+           ^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 194, in run
+    return runner.run(main)
+           ^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/uvloop/__init__.py", line 61, in wrapper
+    return await main
+           ^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 1431, in run_server
+    await run_server_worker(listen_address, sock, args, **uvicorn_kwargs)
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 1451, in run_server_worker
+    async with build_async_engine_client(args, client_config) as engine_client:
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 158, in build_async_engine_client
+    async with build_async_engine_client_from_engine_args(
+  File "/usr/lib/python3.12/contextlib.py", line 210, in __aenter__
+    return await anext(self.gen)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/entrypoints/openai/api_server.py", line 180, in build_async_engine_client_from_engine_args
+    vllm_config = engine_args.create_engine_config(usage_context=usage_context)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 1067, in create_engine_config
+    model_config = self.create_model_config()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/engine/arg_utils.py", line 956, in create_model_config
+    return ModelConfig(
+           ^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/pydantic/_internal/_dataclasses.py", line 123, in __init__
+    s.__pydantic_validator__.validate_python(ArgsKwargs(args, kwargs), self_instance=s)
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/config.py", line 567, in __post_init__
+    self.dtype = _get_and_verify_dtype(
+                 ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/config.py", line 3346, in _get_and_verify_dtype
+    torch_dtype = _resolve_auto_dtype(
+                  ^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/config.py", line 3294, in _resolve_auto_dtype
+    dtype for dtype in current_platform.supported_dtypes
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/cuda.py", line 63, in supported_dtypes
+    if self.has_device_capability(80):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/cuda.py", line 46, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/cuda.py", line 453, in has_device_capability
+    return super().has_device_capability(capability, device_id)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/interface.py", line 222, in has_device_capability
+    current_capability = cls.get_device_capability(device_id=device_id)
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/cuda.py", line 46, in wrapper
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/platforms/cuda.py", line 439, in get_device_capability
+    handle = pynvml.nvmlDeviceGetHandleByIndex(physical_device_id)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/third_party/pynvml.py", line 2609, in nvmlDeviceGetHandleByIndex
+    _nvmlCheckReturn(ret)
+  File "/home/frank/Research/GenTorrent-danielsfork/venv/lib/python3.12/site-packages/vllm/third_party/pynvml.py", line 1047, in _nvmlCheckReturn
+    raise NVMLError(ret)
+vllm.third_party.pynvml.NVMLError_InvalidArgument: Invalid Argument
