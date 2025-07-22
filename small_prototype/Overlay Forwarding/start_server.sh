@@ -24,7 +24,7 @@
 #     --port 800$X > logs/llama3_$X.log 2>&1 &
 # done
 
-for X in {0}
+for X in 0
 do
   echo "[INFO] Launching vLLM instance mnode$X on GPU $X (port 800$X)..."
   CUDA_VISIBLE_DEVICES=$X python3 -m vllm.entrypoints.openai.api_server \
