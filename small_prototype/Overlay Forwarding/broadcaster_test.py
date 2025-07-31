@@ -5,14 +5,19 @@ import asyncio
 
 async def main():
     broadcaster = Broadcaster("localhost", 8000)
-    await broadcaster.start_server()
-    asyncio.create_task(broadcaster.run_server_forever())
+    client = Client(broadcaster)
     
-        # Run client and keep server alive in parallel
-    await asyncio.gather(
-        broadcaster.run_server_forever(),  # the client
-        asyncio.Future(),                  # prevents exit (dummy forever task)
-    )
+    await asyncio.sleep(10)
+    
+    # await broadcaster.start_server()
+    # await client.join_broadcast_channel()
+    # await client.__send_tree_to_broadcaster()
+    # asyncio.create_task(broadcaster.run_server_forever())
+    
+    #     # Run client and keep server alive in parallel
+    # await asyncio.gather(
+    #     broadcaster.run_server_forever()  # the client
+    # )
 
     # client1 = Client(broadcaster)
     # client2 = Client(broadcaster)

@@ -2,7 +2,9 @@ import asyncio
 import websockets
 import json
 
-from websockets.server import ServerConnection
+# from websockets.server import ServerConnection
+from websockets.asyncio.server import serve, ServerConnection
+
 
 class Broadcaster:
     def __init__(self, host, port):
@@ -11,14 +13,28 @@ class Broadcaster:
         self.server = None
         self.host = host
         self.port = port
+        self.ready = asyncio.Event()
         
         self.ws_uri = f"ws://{host}:{port}"
-
+        asyncio.create_task(self.start_server())
         
     async def start_server(self):
-        print(f"Broadcaster listening on ws://{self.host}:{self.port}")
-        self.server = await websockets.serve(self.handle_connection, self.host, self.port)
+        async def handler(connection: ServerConnection):
+            self.connected_client_links.add(connection)
+            print("client joined")
+            try:
+                async for message in connection:
+                    print(f"Received message: {message}")
+                    # Process message or broadcast to others
+            except websockets.ConnectionClosed:
+                print("Client disconnected")
+            finally:
+                self.connected_client_links.remove(connection)
 
+        self.server = await websockets.serve(handler, self.host, self.port)
+        print("Broadcaster server started.")
+        self.ready.set()  # Notify clients that server is ready
+        
     async def run_server_forever(self):
         await self.aggregate_loop()
         
@@ -36,6 +52,7 @@ class Broadcaster:
     #     self.connected_client_links.add(connection)
     async def handle_connection(self, connection: ServerConnection):
         self.connected_client_links.add(connection)
+        print("client joined")
         try:
             async for message in connection:
                 print(f"Received message: {message}")

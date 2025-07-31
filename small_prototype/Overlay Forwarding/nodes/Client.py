@@ -19,6 +19,10 @@ model_list = [
     for i in range(8)
 ]
 
+
+
+
+
 class Client:
     __slots__ = ["hrt", "tokenizer", "broadcaster"]
 
@@ -27,14 +31,22 @@ class Client:
         # self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
         self.broadcaster = broadcaster
         # join the broadcaster thing
+        asyncio.create_task(self._wait_and_connect())
+
+        # asyncio.create_task(self.join_broadcast_channel())  # Auto-connect
+
         
     # CONNECTION CODE
+    async def _wait_and_connect(self):
+        await self.broadcaster.ready.wait()  # Wait for broadcaster readiness
+        await self.join_broadcast_channel()
     
     async def join_broadcast_channel(self):
         
         broadcaster_uri = f"ws://{self.broadcaster.host}:{self.broadcaster.port}"
         async with websockets.connect(broadcaster_uri) as websocket:
             print("Client connected to broadcaster")
+            await self.__send_tree_to_broadcaster(websocket)
             
     async def start_listener(self):
         while(True):
@@ -42,11 +54,12 @@ class Client:
             print("starting client listener")
             
     async def __send_tree_to_broadcaster(self, websocket):
-        tree_to_json = self.__convert_tree_to_json()
-        await websocket.send(json.dumps({
-            "type": "client_tree",
-            "data": tree_to_json
-        }))
+        # tree_to_json = self.__convert_tree_to_json()
+        # await websocket.send(json.dumps({
+        #     "type": "client_tree",
+        #     "data": tree_to_json
+        # }))
+        await websocket.send("hello")
 
     def __convert_tree_to_json(self):
         # You need to implement this method in HashRadixTree
