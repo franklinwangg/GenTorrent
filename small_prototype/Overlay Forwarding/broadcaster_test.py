@@ -5,7 +5,7 @@ import asyncio
 
 async def main():
     broadcaster = Broadcaster("localhost", 8000)
-    client = Client(broadcaster)
+    client = Client("client1", broadcaster)
     
     await asyncio.sleep(10)
     

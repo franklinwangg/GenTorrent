@@ -24,7 +24,7 @@ class Broadcaster:
             print("client joined")
             try:
                 async for message in connection:
-                    print(f"Received message: {message}")
+                    print(f"Broadcaster received message: {message}")
                     # Process message or broadcast to others
             except websockets.ConnectionClosed:
                 print("Client disconnected")
@@ -35,6 +35,42 @@ class Broadcaster:
         print("Broadcaster server started.")
         self.ready.set()  # Notify clients that server is ready
         
+        asyncio.create_task(self.broadcast_loop())  # Starts server-wide logic
+
+        
+        
+    # async def ping_clients(self):
+    #     # 1) ping every client in list
+    #     for link in self.connected_client_links:
+    #         link.send("hello")
+    #     # 2) wait for their responses
+    #     count = 0
+        
+    #     # 3) for each response, just concatenate it into a string and then print it out
+        
+    async def broadcast_loop(self):
+        while True:
+            await asyncio.sleep(5)
+            json_msg = {
+                "type": "ask_for_tree",
+                "data": {
+                    "root": {
+                    "hash": "abc123",
+                    "children": [
+                        {
+                        "hash": "def456",
+                        "children": []
+                        },
+                        {
+                        "hash": "ghi789",
+                        "children": []
+                        }
+                    ]
+                    }
+                }
+            }
+            await self.send_broadcast(json.dumps(json_msg))
+    
     async def run_server_forever(self):
         await self.aggregate_loop()
         

@@ -24,56 +24,63 @@ model_list = [
 
 
 class Client:
-    __slots__ = ["hrt", "tokenizer", "broadcaster"]
+    __slots__ = ["name", "hrt", "tokenizer", "broadcaster"]
 
-    def __init__(self, broadcaster):
+    def __init__(self, name, broadcaster):
         self.hrt = HashRadixTree(model_list)
+        self.name = name
         # self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
         self.broadcaster = broadcaster
-        # join the broadcaster thing
         asyncio.create_task(self._wait_and_connect())
-
-        # asyncio.create_task(self.join_broadcast_channel())  # Auto-connect
 
         
     # CONNECTION CODE
     async def _wait_and_connect(self):
         await self.broadcaster.ready.wait()  # Wait for broadcaster readiness
-        await self.join_broadcast_channel()
+        await self.listen_broadcast_channel()
     
-    async def join_broadcast_channel(self):
-        
+    async def listen_broadcast_channel(self):
         broadcaster_uri = f"ws://{self.broadcaster.host}:{self.broadcaster.port}"
         async with websockets.connect(broadcaster_uri) as websocket:
-            print("Client connected to broadcaster")
-            await self.__send_tree_to_broadcaster(websocket)
+            print(f"Client {self.name} connected to broadcaster")
+            # await self.__send_tree_to_broadcaster(websocket)
             
-    async def start_listener(self):
-        while(True):
-            await asyncio.sleep(1)
-            print("starting client listener")
-            
-    async def __send_tree_to_broadcaster(self, websocket):
-        # tree_to_json = self.__convert_tree_to_json()
-        # await websocket.send(json.dumps({
-        #     "type": "client_tree",
-        #     "data": tree_to_json
-        # }))
-        await websocket.send("hello")
+            # Now listen for messages from the broadcaster
+            try:
+                async for message in websocket:
+                    try:
+                        msg = json.loads(message)
+                        msg_type = msg.get("type")
+                        if msg_type == "ask_for_tree":
+                            print(f"Client {self.name} received asking for tree : {message}")
+                        elif msg_type == "set_tree":
+                            print(f"Client {self.name} received set tree : {message}")
+                        else:
+                            print(f"Client {self.name} received different message : {message}")
+                    except Exception as e:
+                        print("Error processing message:", e)
+                
+                    # async for message in websocket:
+                    #     try:
+                    #         msg = json.loads(message)
+                    #         msg_type = msg.get("type")
+                            
+                    #         if msg_type == "tree_update":
+                    #             await self.__receive_tree_from_broadcaster(msg["data"])
+                    #         elif msg_type == "ping":
+                    #             print("Ping received:", msg["data"])
+                    #         elif msg_type == "command":
+                    #             await self.handle_command(msg["data"])
+                    #         else:
+                    #             print("Unknown message type:", msg_type)
+                    #     except Exception as e:
+                    #         print("Error processing message:", e)
 
-    def __convert_tree_to_json(self):
-        # You need to implement this method in HashRadixTree
-        return self.hrt.to_json()
 
-    async def __receive_tree_from_broadcaster(self, json_data):
-        tree_obj = json.loads(json_data)
-        self.hrt = HashRadixTree.from_json(tree_obj)  # You must implement `from_json` in your class
+                    # await self.__receive_tree_from_broadcaster(message)
+            except websockets.ConnectionClosed:
+                print("Connection to broadcaster closed.")    
+                
     
-    async def register_with_broadcaster(self, broadcaster):
-        broadcaster.add_client(self)
-
-    # async def process_request(self, prompt: str):
-    #     tokens = self.tokenizer.encode(prompt)
-    #     model_node, hrt_node = self.hrt.find_match_model(tokens)
-    #     model_node.send_prompt(prompt)
-        
+    async def __send_tree_to_broadcaster(self, websocket):
+        await websocket.send("hello")
