@@ -23,11 +23,13 @@ model_list = [
 
 class Client:
     
-    def __init__(self, name, host, port, neighbor_list = []):
+    def __init__(self, name, host, port, prompt_path, neighbor_list = []):
         self.hrt = HashRadixTree(model_list)
         self.name = name
         self.neighbor_list = neighbor_list
-        # self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        
+        self.prompt_path = prompt_path
         
         self.neighbor_list = neighbor_list  # List of (host, port) tuples
         self.neighbor_connections = {}      # Map from neighbor to writer object
@@ -51,7 +53,6 @@ class Client:
         await self._neighbors_ready.wait()
 
         await self._wait_for_all_neighbors()
-        await self._listen_broadcast_channel()
 
     async def _wait_for_all_neighbors(self):
         connect_tasks = [
@@ -73,37 +74,76 @@ class Client:
                 print(f"[RETRYING] Connection to {neighbor.name} failed, host : {host}, port : {port}, : {e}")
                 await asyncio.sleep(1)  # Retry delay
                 
-    async def _listen_broadcast_channel(self):
-        # Example placeholder — you’ll implement actual logic here
-        print("[LISTENING] on broadcast channel")
-        while True:
-            print("client listening")
-            await asyncio.sleep(1)
-            
             
     async def start_server(self):
         # async def handler(connection: ServerConnection):
         #     self.connected_client_links.add(connection)
         #     print("client joined")
-        #     try:
-        #         async for message in connection:
-        #             print(f"Broadcaster received message: {message}")
+            # try:
+            #     async for message in connection:
+            #         print(f"Broadcaster received message: {message}")
                     
-        #             json_to_hrt = HashRadixTree.json_to_tree(message)
-        #             self.hrt_list.append(json_to_hrt) # need to convert to hrt?
+            #         json_to_hrt = HashRadixTree.json_to_tree(message)
+            #         self.hrt_list.append(json_to_hrt) # need to convert to hrt?
                     
-        #             if len(self.hrt_list) >= len(self.connected_client_links):
-        #                 self.all_trees_aggregated.set()
-        #             # erase all the entries from the hrt_list afterward
+            #         if len(self.hrt_list) >= len(self.connected_client_links):
+            #             self.all_trees_aggregated.set()
+            #         # erase all the entries from the hrt_list afterward
                 
-        #     except websockets.ConnectionClosed:
-        #         print("Client disconnected")
-        #     finally:
-        #         self.connected_client_links.remove(connection)
+            # except websockets.ConnectionClosed:
+            #     print("Client disconnected")
+            # finally:
+            #     self.connected_client_links.remove(connection)
         async def handler(connection: ServerConnection):
+            # 1) figure out how the hrt vllm feeds prompts into clients
             print(f"Client joined on {self.name}.")
+            try:
+                async for message in connection:
+                    print(f"Broadcaster received message: {message}")
+                    
+            except websockets.ConnectionClosed:
+                print("Client disconnected")
+            finally:
+                self.neighbor_connections.pop(connection)
 
         self.server = await websockets.serve(handler, self.host, self.port)
         
-        print(f"Client {self.name}'s server started.")        
+        print(f"Client {self.name}'s server started.")
         # asyncio.create_task(self.broadcast_loop())  # Starts server-wide logic
+        
+    async def process_prompts(self):
+        # 1) for each line in prompt_dataset, process it
+        # 2) for each line, await it to be finished processing
+        # 3) 
+        try:
+            with open(self.prompt_path, 'r') as f:
+                lines = f.readlines()
+        except Exception as e:
+            print(f"[{self.name}] Error reading prompt file: {e}")
+            return
+
+        for line in lines:
+            prompt = line.strip()
+            if not prompt:
+                continue
+            print(f"[{self.name}] Processing prompt: {prompt}")
+            await self.handle_prompt(prompt)  # You define this method
+
+        print(f"[{self.name}] Finished processing all prompts.")
+        
+    async def handle_prompt(self, prompt):
+        # 1) send to tokenizer
+        token_ids = self.tokenizer(prompt)
+        
+        # 1.1) find the match model. if it doesn't exist, insert a new leaf into the trie
+        match_model, hash_radix_node = self.hrt.find_match_model(token_ids)
+        
+        # 1.2) send the prompt to the match model - TO BE IMPLEMENTED
+        
+        # 2) send the hash to all neighbors
+        for neighbor in self.neighbor_connections:
+            # 1) send a hash over to them
+            writer = self.neighbor_connections[neighbor][1]
+            writer.write(token_ids)
+            
+            # 2) once they receive it, they insert it into their hrt's
