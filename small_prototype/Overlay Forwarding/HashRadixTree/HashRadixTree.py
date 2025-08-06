@@ -2,6 +2,7 @@ from typing import Dict, List, Tuple
 from .ModelNode import ModelNode
 import random
 from typing import Union
+import json
 
 ##############################################################################
 #                       HASH RADIX TRIE CLASSES
@@ -26,6 +27,18 @@ class HashRadixNode:
                 self.children[key].merge(child)
             else:
                 self.children[key] = child
+    
+    @classmethod
+    def node_to_json(cls, node):
+        return {
+            "is_end": node.is_end,
+            "model_list": [model.name for model in node.model_list],
+            "children": {
+                str(k): cls.node_to_json(v)  # works because cls refers to the class
+                for k, v in node.children.items()
+            }
+        }
+
 
 class HashRadixTree:
     def __init__(self,
@@ -64,6 +77,39 @@ class HashRadixTree:
 
         # node = self.insert_workload(first_workload)
         # self.assign_workload(first_mnode, node)
+        
+
+    @staticmethod
+    def tree_to_json(tree):
+        h_val = tree.hash_chunk(tree.magic_ids)
+        root1 = tree.root.children[h_val]
+        return json.dumps(HashRadixNode.node_to_json(root1), indent=2)
+
+    @staticmethod
+    def json_to_tree(json_obj):
+        def build_node(data: dict):
+            node = HashRadixNode()
+            node.model_list = data.get("model_list", [])
+            for key, child_data in data.get("children", {}).items():
+                node.children[key] = build_node(child_data)
+            return node
+
+        root_node = build_node(json_obj["children"])  # wrap in root HashRadixNode
+        tree = HashRadixTree(candidate_models=[])  # You'll probably need to supply models if used internally
+        tree.root.children = root_node.children  # replace root’s children
+        return tree
+
+    
+    def merge_tree(self, other_tree: "HashRadixTree") -> None:
+        """Merge another HashRadixTree into this one."""
+        my_magic_hash = self.hash_chunk(self.magic_ids)
+        other_magic_hash = self.hash_chunk(other_tree.magic_ids)
+
+        my_root1 = self.root.children[my_magic_hash]
+        other_root1 = other_tree.root.children[other_magic_hash]
+
+        my_root1.merge(other_root1)
+
 
     def find_idle_node(self) -> ModelNode:
         # task_list = {model.pending_tasks:model for model in self.candidate_models}

@@ -4,6 +4,8 @@ import json
 
 # from websockets.server import ServerConnection
 from websockets.asyncio.server import serve, ServerConnection
+from HashRadixTree.HashRadixTree import HashRadixTree
+
 
 
 class Broadcaster:
@@ -14,6 +16,9 @@ class Broadcaster:
         self.host = host
         self.port = port
         self.ready = asyncio.Event()
+        self.all_trees_aggregated = asyncio.Event()
+        
+        self.hrt_list = []
         
         self.ws_uri = f"ws://{host}:{port}"
         asyncio.create_task(self.start_server())
@@ -25,7 +30,14 @@ class Broadcaster:
             try:
                 async for message in connection:
                     print(f"Broadcaster received message: {message}")
-                    # Process message or broadcast to others
+                    
+                    json_to_hrt = HashRadixTree.json_to_tree(message)
+                    self.hrt_list.append(json_to_hrt) # need to convert to hrt?
+                    
+                    if len(self.hrt_list) >= len(self.connected_client_links):
+                        self.all_trees_aggregated.set()
+                    # erase all the entries from the hrt_list afterward
+                
             except websockets.ConnectionClosed:
                 print("Client disconnected")
             finally:
@@ -37,55 +49,29 @@ class Broadcaster:
         
         asyncio.create_task(self.broadcast_loop())  # Starts server-wide logic
 
-        
-        
-    # async def ping_clients(self):
-    #     # 1) ping every client in list
-    #     for link in self.connected_client_links:
-    #         link.send("hello")
-    #     # 2) wait for their responses
-    #     count = 0
-        
-    #     # 3) for each response, just concatenate it into a string and then print it out
-        
     async def broadcast_loop(self):
         while True:
-            await asyncio.sleep(5)
-            json_msg = {
-                "type": "ask_for_tree",
-                "data": {
-                    "root": {
-                    "hash": "abc123",
-                    "children": [
-                        {
-                        "hash": "def456",
-                        "children": []
-                        },
-                        {
-                        "hash": "ghi789",
-                        "children": []
-                        }
-                    ]
-                    }
-                }
-            }
-            await self.send_broadcast(json.dumps(json_msg))
-    
-    async def run_server_forever(self):
-        await self.aggregate_loop()
+            await self.count_down(5)
+            await self.ask_for_tree()
+            
+            while(len(self.hrt_list) < len(self.connected_client_links)):
+                pass
+            
+            
+    async def count_down(self, seconds):
+        await asyncio.sleep(seconds)
+            
+    async def ask_for_tree(self):
+        json_msg = {
+            "type": "ask_for_tree"
+        }
+        await self.send_broadcast(json.dumps(json_msg))
         
     async def send_broadcast(self, message):
         print("sent broadcast : ", message)
         for link in self.connected_client_links:
             await link.send(message)
 
-
-    # async def handle_connection(self, websocket, path):
-    #     # Get client IP and port as a simple "URI"
-    #     self.connected_client_links.add(websocket)
-    
-    # async def handle_connection(self, connection: ServerConnection):
-    #     self.connected_client_links.add(connection)
     async def handle_connection(self, connection: ServerConnection):
         self.connected_client_links.add(connection)
         print("client joined")
@@ -97,24 +83,6 @@ class Broadcaster:
             print("Client disconnected")
         finally:
             self.connected_client_links.remove(connection)
-
-    
-
-
-
-
-
-
-    # async def aggregate_loop(self):
-    #     while True:
-    #         await asyncio.sleep(1)  # aggregate every 1 second
-    #         print("Aggregating loop.")
-    #         # self.aggregate_broadcasts()
-           
-    #         async for message in websocket:
-    #             print(f"Received from client : {message}")
-    #             data = json.loads(message)
-            
 
     async def aggregate_loop(self):
         async with websockets.connect(self.ws_uri) as websocket:
