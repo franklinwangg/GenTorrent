@@ -1,7 +1,3 @@
-# 1) Each client should have: An instance of the hash radix tree, Methods to modify its tree, A way to receive and apply a new global tree
-# 2) The broadcaster will: Periodically collect all clients’ trees, Merge them into a single tree, Broadcast that tree back to each client
-# 3) convert the hrt into json, send over websocket, then convert the json back into an hrt
-
 import asyncio
 import websockets
 import json
@@ -51,16 +47,10 @@ class Client:
     # CONNECTION CODE
     
     async def _wait_and_connect(self):
-        print("1")
-        # await self.start_server()
         asyncio.create_task(self.start_server())
-        print("2")
 
         await self._server_ready.wait()
         await self._neighbors_ready.wait()
-        
-        
-        print("3")
 
         await self._wait_for_all_neighbors()
         await self.process_prompts()
@@ -79,43 +69,111 @@ class Client:
         self._all_neighbors_connected.set()
         
     async def _connect_to_neighbor(self, neighbor):
-        host, port = neighbor.host, neighbor.port
+        uri = f"ws://{neighbor.host}:{neighbor.port}"
         while True:
             try:
-                reader, writer = await asyncio.open_connection(host, port)
-                self.neighbor_connections[neighbor] = (reader, writer)
+                websocket = await websockets.connect(uri)
+                self.neighbor_connections[neighbor] = websocket
                 print(f"Client {self.name} is [CONNECTED] to neighbor {neighbor.name}")
                 return
             except Exception as e:
-                print(f"[RETRYING] Connection to {neighbor.name} failed, host : {host}, port : {port}, : {e}")
-                await asyncio.sleep(1)  # Retry delay
+                print(f"[RETRYING] WebSocket connection to {neighbor.name} failed: {e}")
+                await asyncio.sleep(1)
+                
                 
             
-    async def start_server(self):
+    # async def start_server(self):
         
+    #     def handler(websocket, path):
+    #         print(f"Client joined on {path}.")
+            
+    #         try:
+    #             for message in websocket:
+    #                 print(f"Received message: {message}")
+    #         except websockets.exceptions.ConnectionClosed as error:
+    #             print(f"Client disconnected: {error}")
+                
+                
+        # async def handler(connection: ServerConnection):
+        #     self.connected_client_links.add(connection)
+        #     print("client joined")
+        #     try:
+        #         async for message in connection:
+        #             print(f"Broadcaster received message: {message}")
+                    
+        #             json_to_hrt = HashRadixTree.json_to_tree(message)
+        #             self.hrt_list.append(json_to_hrt) # need to convert to hrt?
+                    
+        #             if len(self.hrt_list) >= len(self.connected_client_links):
+        #                 self.all_trees_aggregated.set()
+        #             # erase all the entries from the hrt_list afterward
+        # server = await websockets.serve(handler, )
+        # print(f"Server started on {self.host}:{self.port}")
+        # # Keep server alive in background
+        # asyncio.create_task(server.wait_closed())
+
+        # # Launch a forever task so this coroutine doesn't return
+        # asyncio.create_task(self._keep_alive())
+        # self._server_ready.set()
+
+        # print(f"Client {self.name}'s server started.")
+        
+        
+        
+        
+        
+        
+    async def start_server(self):
+        # 1) start server - 
         async def handler(connection: ServerConnection):
-            # 1) figure out how the hrt vllm feeds prompts into clients
             print(f"Client joined on {self.name}.")
             try:
                 async for message in connection:
-                    print(f"Broadcaster received message: {message}")
+                    print(f"Client received message: {message}")
                     
+                    # erase all the entries from the hrt_list afterward
+                
             except websockets.ConnectionClosed:
                 print("Client disconnected")
-            finally:
-                self.neighbor_connections.pop(connection)
+            # finally:
+            #     self.connected_client_links.remove(connection)
         
         server = await websockets.serve(handler, self.host, self.port)
-        print(f"Server started on {self.host}:{self.port}")
-
-        # Keep server alive in background
         asyncio.create_task(server.wait_closed())
-
-        # Launch a forever task so this coroutine doesn't return
-        asyncio.create_task(self._keep_alive())
         self._server_ready.set()
+        
+        
+        
+        
+        
+        
+        
 
-        print(f"Client {self.name}'s server started.")
+    # async def start_server(self):
+    #     async def handler(connection: ServerConnection):
+    #         print("client joined")
+    #         try:
+    #             async for message in connection:
+    #                 print(f"Broadcaster received message: {message}")
+                    
+    #                 # erase all the entries from the hrt_list afterward
+                
+    #         except websockets.ConnectionClosed:
+    #             print("Client disconnected")
+    #         # finally:
+    #         #     self.connected_client_links.remove(connection)
+
+    #     self.server = await websockets.serve(handler, self.host, self.port)
+    #     print("Broadcaster server started.")
+    #     self._server_ready.set()  # Notify clients that server is ready
+
+
+
+
+
+
+
+
 
     async def _keep_alive(self):
         await asyncio.Future()  # never completes
@@ -151,22 +209,10 @@ class Client:
         
         # 1.2) send the prompt to the match model - TO BE IMPLEMENTED
         
+                    
+        tokens_dict = token_ids.data  # or tokens.to_dict()
+        json_string = json.dumps(tokens_dict)
+
         # 2) send the hash to all neighbors
         for neighbor in self.neighbor_connections:
-            # 1) send a hash over to them
-            writer = self.neighbor_connections[neighbor][1]
-
-            # Step 1: Convert BatchEncoding to a serializable dictionary
-            tokens_dict = token_ids.data  # or tokens.to_dict()
-
-            # Step 2: Convert to JSON string
-            json_string = json.dumps(tokens_dict)
-
-            # Step 3: Encode to bytes
-            writer.write(json_string.encode('utf-8'))
-
-            # writer.write(token_ids)
-            
-            # 2) once they receive it, they insert it into their hrt's
-            
-        
+            await self.neighbor_connections[neighbor].send(json_string)
