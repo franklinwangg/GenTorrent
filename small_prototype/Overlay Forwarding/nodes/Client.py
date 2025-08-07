@@ -12,8 +12,7 @@ from transformers import AutoTokenizer
 from nodes.Broadcaster import Broadcaster
 from websockets.asyncio.server import serve, ServerConnection
 
-
-MODEL_NAME = "meta-llama/Llama-3.1-8B-Instruct"
+MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
 MAX_MODEL_CONCURRENCY = 4
 
 model_list = [
@@ -34,7 +33,10 @@ class Client:
         self.neighbor_list = neighbor_list  # List of (host, port) tuples
         self.neighbor_connections = {}      # Map from neighbor to writer object
         
+        self._server_ready = asyncio.Event()
         self._neighbors_ready = asyncio.Event()
+        self._all_neighbors_connected = asyncio.Event()
+
         self.host = host
         self.port = port
 
@@ -49,18 +51,32 @@ class Client:
     # CONNECTION CODE
     
     async def _wait_and_connect(self):
-        await self.start_server()
+        print("1")
+        # await self.start_server()
+        asyncio.create_task(self.start_server())
+        print("2")
+
+        await self._server_ready.wait()
         await self._neighbors_ready.wait()
+        
+        
+        print("3")
 
         await self._wait_for_all_neighbors()
+        await self.process_prompts()
+        
+                # prompts_task = asyncio.create_task(self.process_prompts())
+
 
     async def _wait_for_all_neighbors(self):
+        print(f"{self.name} CURRENTLY WAITING ON NEIGHBORS")
         connect_tasks = [
             self._connect_to_neighbor(neighbor) 
             for neighbor in self.neighbor_list
         ]
         await asyncio.gather(*connect_tasks)
         print("[ALL CONNECTED] Proceeding to next step.")
+        self._all_neighbors_connected.set()
         
     async def _connect_to_neighbor(self, neighbor):
         host, port = neighbor.host, neighbor.port
@@ -76,24 +92,7 @@ class Client:
                 
             
     async def start_server(self):
-        # async def handler(connection: ServerConnection):
-        #     self.connected_client_links.add(connection)
-        #     print("client joined")
-            # try:
-            #     async for message in connection:
-            #         print(f"Broadcaster received message: {message}")
-                    
-            #         json_to_hrt = HashRadixTree.json_to_tree(message)
-            #         self.hrt_list.append(json_to_hrt) # need to convert to hrt?
-                    
-            #         if len(self.hrt_list) >= len(self.connected_client_links):
-            #             self.all_trees_aggregated.set()
-            #         # erase all the entries from the hrt_list afterward
-                
-            # except websockets.ConnectionClosed:
-            #     print("Client disconnected")
-            # finally:
-            #     self.connected_client_links.remove(connection)
+        
         async def handler(connection: ServerConnection):
             # 1) figure out how the hrt vllm feeds prompts into clients
             print(f"Client joined on {self.name}.")
@@ -105,13 +104,24 @@ class Client:
                 print("Client disconnected")
             finally:
                 self.neighbor_connections.pop(connection)
+        
+        server = await websockets.serve(handler, self.host, self.port)
+        print(f"Server started on {self.host}:{self.port}")
 
-        self.server = await websockets.serve(handler, self.host, self.port)
-        
+        # Keep server alive in background
+        asyncio.create_task(server.wait_closed())
+
+        # Launch a forever task so this coroutine doesn't return
+        asyncio.create_task(self._keep_alive())
+        self._server_ready.set()
+
         print(f"Client {self.name}'s server started.")
-        # asyncio.create_task(self.broadcast_loop())  # Starts server-wide logic
-        
+
+    async def _keep_alive(self):
+        await asyncio.Future()  # never completes
     async def process_prompts(self):
+        
+        # await self._all_neighbors_connected.wait()
         # 1) for each line in prompt_dataset, process it
         # 2) for each line, await it to be finished processing
         # 3) 
@@ -127,11 +137,12 @@ class Client:
             if not prompt:
                 continue
             print(f"[{self.name}] Processing prompt: {prompt}")
-            await self.handle_prompt(prompt)  # You define this method
+            await self.handle_prompt(prompt)
 
         print(f"[{self.name}] Finished processing all prompts.")
         
-    async def handle_prompt(self, prompt):
+    async def handle_prompt(self, prompt): 
+        
         # 1) send to tokenizer
         token_ids = self.tokenizer(prompt)
         
@@ -144,6 +155,18 @@ class Client:
         for neighbor in self.neighbor_connections:
             # 1) send a hash over to them
             writer = self.neighbor_connections[neighbor][1]
-            writer.write(token_ids)
+
+            # Step 1: Convert BatchEncoding to a serializable dictionary
+            tokens_dict = token_ids.data  # or tokens.to_dict()
+
+            # Step 2: Convert to JSON string
+            json_string = json.dumps(tokens_dict)
+
+            # Step 3: Encode to bytes
+            writer.write(json_string.encode('utf-8'))
+
+            # writer.write(token_ids)
             
             # 2) once they receive it, they insert it into their hrt's
+            
+        

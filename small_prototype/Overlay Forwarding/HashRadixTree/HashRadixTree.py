@@ -152,7 +152,8 @@ class HashRadixTree:
         if isinstance(tokens, list):
             input_ids = tokens
         else:
-            input_ids = tokens["input_ids"].tolist()[0]
+            input_ids = tokens["input_ids"]
+            # input_ids = tokens["input_ids"].tolist()[0]
 
         total_tokens = len(input_ids)
         chunks: List[Tuple[int, ...]] = []
@@ -186,8 +187,9 @@ class HashRadixTree:
         if isinstance(tokens, list):
             input_ids = tokens
         else:
-            input_ids = tokens["input_ids"].tolist()[0]
-
+            # input_ids = tokens["input_ids"].tolist()[0]
+            input_ids = tokens["input_ids"]
+            # tokens[input ids] is a list
 
         total_tokens = len(input_ids)
         while i < total_tokens:
