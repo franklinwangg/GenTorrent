@@ -1,6 +1,9 @@
 import asyncio
 import websockets
 import json
+import aiohttp
+
+from time import perf_counter
 
 from HashRadixTree.HashRadixTree import HashRadixTree
 from HashRadixTree.ModelNode import ModelNode
@@ -13,7 +16,7 @@ MAX_MODEL_CONCURRENCY = 4
 
 model_list = [
     ModelNode(f"mnode{i}", f"http://127.0.0.1:800{i}/v1/completions", max_concurrency=MAX_MODEL_CONCURRENCY)
-    for i in range(8)
+    for i in range(1)
 ]
 
 class Client:
@@ -54,18 +57,15 @@ class Client:
 
         await self._wait_for_all_neighbors()
         await self.process_prompts()
-        
-                # prompts_task = asyncio.create_task(self.process_prompts())
-
 
     async def _wait_for_all_neighbors(self):
-        print(f"{self.name} CURRENTLY WAITING ON NEIGHBORS")
+        # print(f"{self.name} CURRENTLY WAITING ON NEIGHBORS")
         connect_tasks = [
             self._connect_to_neighbor(neighbor) 
             for neighbor in self.neighbor_list
         ]
         await asyncio.gather(*connect_tasks)
-        print("[ALL CONNECTED] Proceeding to next step.")
+        # print("[ALL CONNECTED] Proceeding to next step.")
         self._all_neighbors_connected.set()
         
     async def _connect_to_neighbor(self, neighbor):
@@ -74,107 +74,41 @@ class Client:
             try:
                 websocket = await websockets.connect(uri)
                 self.neighbor_connections[neighbor] = websocket
-                print(f"Client {self.name} is [CONNECTED] to neighbor {neighbor.name}")
+                # print(f"Client {self.name} is [CONNECTED] to neighbor {neighbor.name}")
                 return
             except Exception as e:
                 print(f"[RETRYING] WebSocket connection to {neighbor.name} failed: {e}")
                 await asyncio.sleep(1)
                 
-                
-            
-    # async def start_server(self):
-        
-    #     def handler(websocket, path):
-    #         print(f"Client joined on {path}.")
-            
-    #         try:
-    #             for message in websocket:
-    #                 print(f"Received message: {message}")
-    #         except websockets.exceptions.ConnectionClosed as error:
-    #             print(f"Client disconnected: {error}")
-                
-                
-        # async def handler(connection: ServerConnection):
-        #     self.connected_client_links.add(connection)
-        #     print("client joined")
-        #     try:
-        #         async for message in connection:
-        #             print(f"Broadcaster received message: {message}")
-                    
-        #             json_to_hrt = HashRadixTree.json_to_tree(message)
-        #             self.hrt_list.append(json_to_hrt) # need to convert to hrt?
-                    
-        #             if len(self.hrt_list) >= len(self.connected_client_links):
-        #                 self.all_trees_aggregated.set()
-        #             # erase all the entries from the hrt_list afterward
-        # server = await websockets.serve(handler, )
-        # print(f"Server started on {self.host}:{self.port}")
-        # # Keep server alive in background
-        # asyncio.create_task(server.wait_closed())
-
-        # # Launch a forever task so this coroutine doesn't return
-        # asyncio.create_task(self._keep_alive())
-        # self._server_ready.set()
-
-        # print(f"Client {self.name}'s server started.")
-        
-        
-        
-        
-        
-        
     async def start_server(self):
         # 1) start server - 
+        # print(f"Client {self.name} original HRT : ")
+        # print(self.hrt.print_tree_by_layers())
         async def handler(connection: ServerConnection):
-            print(f"Client joined on {self.name}.")
+            # print(f"Client joined on {self.name}.")
             try:
                 async for message in connection:
-                    print(f"Client received message: {message}")
                     
-                    # erase all the entries from the hrt_list afterward
+                    # print(f"Client received message: {message}")
+                    # 1) parse the message into tokens
+                    data = json.loads(message)
+                    tokens = data["input_ids"]
+                    
+                    # 2) insertworkload
+                    self.hrt.insert_workload(tokens)
+                    
+                    # print(f"Client {self.name} final HRT : ")
+                    # print(self.hrt.print_tree_by_layers())
                 
             except websockets.ConnectionClosed:
                 print("Client disconnected")
             # finally:
             #     self.connected_client_links.remove(connection)
-        
+            
         server = await websockets.serve(handler, self.host, self.port)
         asyncio.create_task(server.wait_closed())
         self._server_ready.set()
         
-        
-        
-        
-        
-        
-        
-
-    # async def start_server(self):
-    #     async def handler(connection: ServerConnection):
-    #         print("client joined")
-    #         try:
-    #             async for message in connection:
-    #                 print(f"Broadcaster received message: {message}")
-                    
-    #                 # erase all the entries from the hrt_list afterward
-                
-    #         except websockets.ConnectionClosed:
-    #             print("Client disconnected")
-    #         # finally:
-    #         #     self.connected_client_links.remove(connection)
-
-    #     self.server = await websockets.serve(handler, self.host, self.port)
-    #     print("Broadcaster server started.")
-    #     self._server_ready.set()  # Notify clients that server is ready
-
-
-
-
-
-
-
-
-
     async def _keep_alive(self):
         await asyncio.Future()  # never completes
     async def process_prompts(self):
@@ -183,24 +117,25 @@ class Client:
         # 1) for each line in prompt_dataset, process it
         # 2) for each line, await it to be finished processing
         # 3) 
-        try:
-            with open(self.prompt_path, 'r') as f:
-                lines = f.readlines()
-        except Exception as e:
-            print(f"[{self.name}] Error reading prompt file: {e}")
-            return
-
-        for line in lines:
-            prompt = line.strip()
-            if not prompt:
-                continue
-            print(f"[{self.name}] Processing prompt: {prompt}")
-            await self.handle_prompt(prompt)
-
-        print(f"[{self.name}] Finished processing all prompts.")
         
-    async def handle_prompt(self, prompt): 
+        async with aiohttp.ClientSession() as session:        
+            try:
+                with open(self.prompt_path, 'r') as f:
+                    lines = f.readlines()
+            except Exception as e:
+                print(f"[{self.name}] Error reading prompt file: {e}")
+                return
+
+            for line in lines:
+                prompt = line.strip()
+                if not prompt:
+                    continue
+                # print(f"[{self.name}] Processing prompt: {prompt}")
+                await self.handle_prompt(prompt, session)
+
+            # print(f"[{self.name}] Finished processing all prompts.")
         
+    async def handle_prompt(self, prompt, session):         
         # 1) send to tokenizer
         token_ids = self.tokenizer(prompt)
         
@@ -208,11 +143,25 @@ class Client:
         match_model, hash_radix_node = self.hrt.find_match_model(token_ids)
         
         # 1.2) send the prompt to the match model - TO BE IMPLEMENTED
+        print(f"Client {self.name} sending prompt to match model : ")
+        startTime = perf_counter()
+        async with session.post(match_model.url, json={
+            "model": match_model.name,
+            "prompt": prompt,
+            "max_tokens": 128,
+            "temperature": 0,
+            "stop": None,
+            "echo": False
+        }, timeout=80) as resp:
+            _ = await resp.json(content_type=None)
+        # sample = ?
+        endTime = perf_counter()
+        print(f"Client {self.name} : time elapsed - ", (endTime - startTime))
         
-                    
         tokens_dict = token_ids.data  # or tokens.to_dict()
         json_string = json.dumps(tokens_dict)
 
         # 2) send the hash to all neighbors
         for neighbor in self.neighbor_connections:
             await self.neighbor_connections[neighbor].send(json_string)
+            
