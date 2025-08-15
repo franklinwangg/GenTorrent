@@ -41,6 +41,11 @@ class Client:
 
         asyncio.create_task(self._wait_and_connect())
 
+    def add_neighbor(self, neighbor):
+        self.neighbor_list.append(neighbor)
+    
+    def set_neighbors_ready(self):
+        self._neighbors_ready.set()
     
     def set_neighbors(self, neighbors):
         # Exclude self if needed
@@ -70,6 +75,7 @@ class Client:
         
     async def _connect_to_neighbor(self, neighbor):
         uri = f"ws://{neighbor.host}:{neighbor.port}"
+        
         while True:
             try:
                 websocket = await websockets.connect(uri)
@@ -77,7 +83,7 @@ class Client:
                 # print(f"Client {self.name} is [CONNECTED] to neighbor {neighbor.name}")
                 return
             except Exception as e:
-                print(f"[RETRYING] WebSocket connection to {neighbor.name} failed: {e}")
+                print(f"[RETRYING] WebSocket connection to {neighbor.name} at uri {uri} failed: {e}")
                 await asyncio.sleep(1)
                 
     async def start_server(self):
