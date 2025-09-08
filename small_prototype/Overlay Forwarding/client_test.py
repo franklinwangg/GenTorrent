@@ -13,7 +13,7 @@ async def main():
     CLIENT_TEST_PROMPTS_PATH = "data/client1_prompts.txt"
 
     # Create a network of 100 clients
-    G = nx.erdos_renyi_graph(n=10, p=0.05)  # 5% chance of an edge between nodes
+    G = nx.erdos_renyi_graph(n=100, p=0.05)  # 5% chance of an edge between nodes
     
     print("1")
 
@@ -38,6 +38,22 @@ async def main():
 
     print("4")
     await asyncio.sleep(100)
+    print("5")
+
+        
+
+        
+
+    
+    # client1 = Client("client1", "127.0.0.1", 8001, "data/client1_prompts.txt")
+    # client2 = Client("client2", "127.0.0.1", 8002, "data/client2_prompts.txt")
+    # client3 = Client("client3", "127.0.0.1", 8003, "data/client3_prompts.txt")
+    
+    # client1.set_neighbors([client2, client3])
+    # client2.set_neighbors([client1, client3])
+    # client3.set_neighbors([client1, client2])
+    
+    # await asyncio.sleep(100)
 
 if __name__ == "__main__":
     asyncio.run(main())

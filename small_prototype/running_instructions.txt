@@ -1,0 +1,6 @@
+Running Instructions : 
+1) inside prototype/overlay forwarding, create a folder called "logs"
+2) inside the root directory, run "python3 -m venv venv" to create new virtual environment where we will install vllm
+3) run "source venv/bin/activate", then run "pip install vllm". the installation might take 10-20 mins
+4) while you're still inside the virtual environment(aka your terminal is labeled "venv"), to start up the servers run ./start_server.sh, 
+and to run the script that sends prompts to the servers run "python3 local_hrt_vllm.py"

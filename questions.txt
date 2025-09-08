@@ -1,3 +1,32 @@
-llm.generate("hello, my name is Daniel")
-llm.generate("hello, my name is Peter")
-^ if we call this
+1) if we make the broadcaster collect the ENTIRE hash radix tree every time and keep redistributing it, 
+it would become unsustainable after the hash radix trees keep growing and growing
+    - dont need tos end entire tree, just send hashed prompts for privacy, 
+
+2) should i implement clusters?
+    - maybe for every x nodes we have one broadcaster, etc
+
+3) how should we involve the ludo hashing algorithm into this?
+    - maybe use in hash radix tree (or maybe just use tokenizer)
+    - use in tokenizer?
+
+
+
+4) if we use separate clusters that are each specialized for some topic, then should we also implement some 
+way to place new clients into clusters that are suitable for them? like this idea? 
+
+Phase 1: Cold start (Default Cluster)
+When a new client connects, temporarily place them in a general-purpose cluster with a broad HRT trained on mixed/common topics.
+This cluster acts as a “catch-all” until there's enough data.
+Phase 2 : Re-cluster
+After N prompts (e.g. 3–5), generate an embedding or token distribution profile.
+Use that to route the client to a better-fitting specialized cluster.
+Optionally transfer their HRT and context (if possible) to speed up transition.
+
+*** also keep track of which clients are online/offline
+    - cdn (cache reuse) read paper
+
+4) what else should we add to the prototype? right now im thinking we create a bunch of clusters of clients each with their broadcaster, 
+we send the clients prompts, and then we see how long it takes for the llm to answer
+    - most important metric is time (ttft fastest time to return first token)
+
+*** maybe implement some load balancing for model nodes

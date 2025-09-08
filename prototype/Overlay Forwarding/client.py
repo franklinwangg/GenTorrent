@@ -17,7 +17,10 @@ class Client:
         self.hrt = HashRadixTree(model_list)
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
-    def process_request(self, prompt: str):
+    async def process_request(self, prompt: str):
         tokens = self.tokenizer.encode(prompt)
         model_node, hrt_node = self.hrt.find_match_model(tokens)
         # add logic to post to model node url
+        model_node.send_prompt(prompt)
+                
+        # add broadcast logic

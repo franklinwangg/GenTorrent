@@ -8,3 +8,6 @@ tests/
 backup_files/
 venv/
 **.DS_Store
+notes.txt
+goals.txt
+old_code.txt

@@ -32,3 +32,29 @@ class ModelNode:
     def pending_tasks(self) -> int:
         # alias for compatibility with HashRadixTree.find_match_model
         return self.get_pending_tasks()
+    
+    
+# send to model_url
+    async def finish_task(self):
+        self._sem.release()
+
+    async def send_prompt(self, prompt: str, max_tokens: int = 100):
+        """
+        Sends a prompt to the model server at self.url and returns the completion.
+        Assumes OpenAI-style /v1/completions endpoint.
+        """
+        await self.add_task()
+        try:
+            async with aiohttp.ClientSession() as session:
+                payload = {
+                    "prompt": prompt,
+                    "max_tokens": max_tokens,
+                    "temperature": 0.7
+                }
+                async with session.post(self.url, json=payload) as resp:
+                    if resp.status != 200:
+                        raise Exception(f"Request failed with status {resp.status}")
+                    data = await resp.json()
+                    return data
+        finally:
+            await self.finish_task()
